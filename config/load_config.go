@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -37,16 +36,10 @@ func LoadConfiguration(fileName string) {
 }
 
 // LoadCredentials loads credentials configuration
-func LoadCredentials() {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		log.Println("ERROR: could not get home directory")
-		return
-	}
-	path := fmt.Sprintf("%s/credentials.conf", homedir)
-	if _, err = os.Stat(path); os.IsNotExist(err) {
+func LoadCredentials(fileName string) {
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		log.Println("ERROR: could not find config file")
 		return
 	}
-	Credentials = configuration.LoadConfig(path)
+	Credentials = configuration.LoadConfig(fileName)
 }

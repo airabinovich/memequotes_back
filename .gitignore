@@ -13,3 +13,5 @@
 
 # Idea project files
 .idea/
+
+credentials.conf
