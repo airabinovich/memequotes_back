@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	ctx "github.com/airabinovich/memequotes_back/context"
+	commonContext "github.com/airabinovich/memequotes_back/context"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +19,7 @@ func TestHostname(t *testing.T) {
 	router := gin.New()
 	router.Use(Hostname)
 	router.Use(func(c *gin.Context) {
-		hostname = ctx.Hostname(ctx.RequestContext(c))
+		hostname = commonContext.Hostname(commonContext.RequestContext(c))
 		c.Next()
 	})
 
@@ -35,7 +35,7 @@ func TestHostnameWithoutRequestContext(t *testing.T) {
 	c := context.Background()
 	c = HostnameWithoutRequestContext(c)
 
-	hostname := ctx.Hostname(c)
+	hostname := commonContext.Hostname(c)
 
 	assert.NotEmpty(t, hostname)
 	assert.NotEqual(t, "unknown", hostname)

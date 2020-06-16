@@ -55,7 +55,7 @@ func NewCharacter(id int64, name string, dateCreated time.Time, lastUpdated time
 
 //CharacterCommand contains the info to create a Character
 type CharacterCommand struct {
-	Name string `json:"name"`
+	Name string `json:"name" binding:"required"`
 }
 
 //NewCharacterCommand is a constructor for CharacterCommand

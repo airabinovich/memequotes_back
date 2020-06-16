@@ -63,8 +63,8 @@ func NewPhrase(ID int64, characterId int64, character *character.Character, cont
 
 // PhraseCommand contains the info to create a phrase
 type PhraseCommand struct {
-	CharacterId int64  `json:"character_id"`
-	Content     string `json:"content"`
+	CharacterId int64  `json:"character_id" binding:"required"`
+	Content     string `json:"content" binding:"required"`
 }
 
 // NewPhraseCommand is a constructor for PhraseCommand

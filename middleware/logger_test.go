@@ -5,7 +5,7 @@ import (
 	"github.com/airabinovich/memequotes_back/utils"
 	"testing"
 
-	ctx "github.com/airabinovich/memequotes_back/context"
+	commonContext "github.com/airabinovich/memequotes_back/context"
 	log "github.com/airabinovich/memequotes_back/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,12 +21,12 @@ func TestLoggerWithRequestID(t *testing.T) {
 
 	router.Use(RequestID)
 	router.Use(func(c *gin.Context) {
-		requestID = ctx.RequestID(ctx.RequestContext(c))
+		requestID = commonContext.RequestID(commonContext.RequestContext(c))
 		c.Next()
 	})
 	router.Use(Logger)
 	router.Use(func(c *gin.Context) {
-		logger = ctx.Logger(ctx.RequestContext(c))
+		logger = commonContext.Logger(commonContext.RequestContext(c))
 		c.Next()
 	})
 
@@ -48,14 +48,14 @@ func TestLoggerWithRequestIDAndHostname(t *testing.T) {
 	router.Use(RequestID)
 	router.Use(Hostname)
 	router.Use(func(c *gin.Context) {
-		reqCtx := ctx.RequestContext(c)
-		requestID = ctx.RequestID(reqCtx)
-		hostname = ctx.Hostname(reqCtx)
+		reqCtx := commonContext.RequestContext(c)
+		requestID = commonContext.RequestID(reqCtx)
+		hostname = commonContext.Hostname(reqCtx)
 		c.Next()
 	})
 	router.Use(Logger)
 	router.Use(func(c *gin.Context) {
-		logger = ctx.Logger(ctx.RequestContext(c))
+		logger = commonContext.Logger(commonContext.RequestContext(c))
 		c.Next()
 	})
 
@@ -75,12 +75,12 @@ func TestLoggerWithHostnameAndWithoutRequestID(t *testing.T) {
 
 	router.Use(Hostname)
 	router.Use(func(c *gin.Context) {
-		hostname = ctx.Hostname(ctx.RequestContext(c))
+		hostname = commonContext.Hostname(commonContext.RequestContext(c))
 		c.Next()
 	})
 	router.Use(Logger)
 	router.Use(func(c *gin.Context) {
-		logger = ctx.Logger(ctx.RequestContext(c))
+		logger = commonContext.Logger(commonContext.RequestContext(c))
 		c.Next()
 	})
 
@@ -95,12 +95,12 @@ func TestLoggerWithoutRequestContext(t *testing.T) {
 
 	var logger *log.SupportLogger
 	c := context.Background()
-	c = ctx.AppContext(NoRequestContext(c))
+	c = commonContext.AppContext(NoRequestContext(c))
 
-	hostname := ctx.Hostname(c)
-	requestID := ctx.RequestID(c)
+	hostname := commonContext.Hostname(c)
+	requestID := commonContext.RequestID(c)
 
-	logger = ctx.Logger(c)
+	logger = commonContext.Logger(c)
 
 	assert.NotNil(t, logger)
 	assert.Equal(t, requestID, logger.Data["x-request-id"])
@@ -113,15 +113,15 @@ func TestLoggerWithoutRequestContextAndRefreshingRequestID(t *testing.T) {
 	var logger *log.SupportLogger
 	c := context.Background()
 	c = NoRequestContext(c)
-	appCtx := ctx.AppContext(c)
+	appCtx := commonContext.AppContext(c)
 
-	hostname := ctx.Hostname(appCtx)
-	initialRequestID := ctx.RequestID(appCtx)
+	hostname := commonContext.Hostname(appCtx)
+	initialRequestID := commonContext.RequestID(appCtx)
 
-	appCtx = ctx.AppContext(RefreshRequestIDContext(c))
-	refreshedRequestID := ctx.RequestID(appCtx)
+	appCtx = commonContext.AppContext(RefreshRequestIDContext(c))
+	refreshedRequestID := commonContext.RequestID(appCtx)
 
-	logger = ctx.Logger(appCtx)
+	logger = commonContext.Logger(appCtx)
 
 	assert.NotNil(t, logger)
 	assert.NotEqual(t, initialRequestID, logger.Data["x-request-id"])

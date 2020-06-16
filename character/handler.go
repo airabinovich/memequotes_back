@@ -2,20 +2,27 @@ package character
 
 import (
 	"fmt"
-	"github.com/airabinovich/memequotes_back/context"
+	commonContext "github.com/airabinovich/memequotes_back/context"
+	"github.com/airabinovich/memequotes_back/database"
 	"github.com/airabinovich/memequotes_back/rest"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
+var characterRepository CharacterRepository
+
+func Initialize() {
+	characterRepository = NewDBCharacterRepository(database.DB)
+}
+
 func GetCharacter(c *gin.Context) {
 	rest.ErrorWrapper(getCharacter, c)
 }
 
 func getCharacter(c *gin.Context) *rest.APIError {
-	ctx := context.RequestContext(c)
-	logger := context.Logger(ctx)
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -24,7 +31,7 @@ func getCharacter(c *gin.Context) *rest.APIError {
 	}
 
 	logger.Debug(fmt.Sprintf("Getting character with id %d", id))
-	ch, found, err := Get(c, id)
+	ch, found, err := characterRepository.Get(c, id)
 	if err != nil {
 		logger.Error("get character by id", err)
 		return rest.NewInternalServerError(err.Error())
@@ -43,8 +50,8 @@ func SaveCharacter(c *gin.Context) {
 }
 
 func saveCharacter(c *gin.Context) *rest.APIError {
-	ctx := context.RequestContext(c)
-	logger := context.Logger(ctx)
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
 
 	var chCmd CharacterCommand
 	if err := c.ShouldBindJSON(&chCmd); err != nil {
@@ -52,7 +59,7 @@ func saveCharacter(c *gin.Context) *rest.APIError {
 		return rest.NewBadRequest(err.Error())
 	}
 
-	ch, err := Save(c, chCmd)
+	ch, err := characterRepository.Save(c, chCmd)
 	if err != nil {
 		logger.Error("error creating character", err)
 		return rest.NewInternalServerError(err.Error())

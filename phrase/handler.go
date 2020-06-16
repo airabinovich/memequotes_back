@@ -2,12 +2,19 @@ package phrase
 
 import (
 	"fmt"
-	"github.com/airabinovich/memequotes_back/context"
+	commonContext "github.com/airabinovich/memequotes_back/context"
+	"github.com/airabinovich/memequotes_back/database"
 	"github.com/airabinovich/memequotes_back/rest"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
+
+var phraseRepository PhraseRepository
+
+func Initialize() {
+	phraseRepository = NewDBPhraseRepository(database.DB)
+}
 
 // GetAllPhrasesForCharacter returns all phrases for a character wrapped in a json object
 func GetAllPhrasesForCharacter(c *gin.Context) {
@@ -15,8 +22,8 @@ func GetAllPhrasesForCharacter(c *gin.Context) {
 }
 
 func getAllPhrasesForCharacter(c *gin.Context) *rest.APIError {
-	ctx := context.RequestContext(c)
-	logger := context.Logger(ctx)
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
 
 	characterId, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -25,7 +32,7 @@ func getAllPhrasesForCharacter(c *gin.Context) *rest.APIError {
 	}
 
 	logger.Debug(fmt.Sprintf("Getting phrases for character id %d", characterId))
-	phrases, found, err := GetAllForCharacter(c, characterId)
+	phrases, found, err := phraseRepository.GetAllForCharacter(c, characterId)
 	if err != nil {
 		logger.Error("get character by id", err)
 		return rest.NewInternalServerError(err.Error())
@@ -50,8 +57,8 @@ func SaveNewPhrase(c *gin.Context) {
 }
 
 func saveNewPhrase(c *gin.Context) *rest.APIError {
-	ctx := context.RequestContext(c)
-	logger := context.Logger(ctx)
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
 
 	var phCmd PhraseCommand
 	if err := c.ShouldBindJSON(&phCmd); err != nil {
@@ -59,7 +66,7 @@ func saveNewPhrase(c *gin.Context) *rest.APIError {
 		return rest.NewBadRequest(err.Error())
 	}
 
-	phrase, err := Save(c, phCmd)
+	phrase, err := phraseRepository.Save(c, phCmd)
 	if err != nil {
 		logger.Error("error creating phrase", err)
 		return rest.NewInternalServerError(err.Error())

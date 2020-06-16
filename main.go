@@ -4,8 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/airabinovich/memequotes_back/character"
 	"github.com/airabinovich/memequotes_back/config"
 	"github.com/airabinovich/memequotes_back/database"
+	"github.com/airabinovich/memequotes_back/phrase"
 	"github.com/airabinovich/memequotes_back/router"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
@@ -46,6 +48,9 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	character.Initialize()
+	phrase.Initialize()
 
 	engine := router.Route()
 	if err := engine.Run(":9000"); err != nil {

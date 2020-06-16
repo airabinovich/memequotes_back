@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/airabinovich/memequotes_back/context"
+	commonContext "github.com/airabinovich/memequotes_back/context"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,8 +17,8 @@ func TestRequestIDShouldBeAdded(t *testing.T) {
 	router := gin.New()
 	router.Use(RequestID)
 	router.Use(func(c *gin.Context) {
-		ctx := context.RequestContext(c)
-		requestID = context.RequestID(ctx)
+		ctx := commonContext.RequestContext(c)
+		requestID = commonContext.RequestID(ctx)
 		c.Next()
 	})
 
