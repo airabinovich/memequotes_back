@@ -37,6 +37,7 @@ func getCharacter(c *gin.Context) *rest.APIError {
 	return nil
 }
 
+// SaveCharacter saves a new character
 func SaveCharacter(c *gin.Context) {
 	rest.ErrorWrapper(saveCharacter, c)
 }

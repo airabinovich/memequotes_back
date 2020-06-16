@@ -35,7 +35,7 @@ func CharacterResultFromCharacter(ch Character) CharacterResult {
 	}
 }
 
-// Character represents a character that may own prases
+// Character represents a character that may own phrases
 type Character struct {
 	ID          int64     `gorm:"primary_key;AUTO_INCREMENT"`
 	Name        string    `gorm:"unique"`

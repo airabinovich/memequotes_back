@@ -24,6 +24,7 @@ func Get(c *gin.Context, id int64) (Character, bool, error) {
 	return ch, !notFound, nil
 }
 
+// Save stores a new character
 func Save(c *gin.Context, chCmd CharacterCommand) (Character, error) {
 	ctx := commonContext.RequestContext(c)
 	logger := commonContext.Logger(ctx)
@@ -31,7 +32,6 @@ func Save(c *gin.Context, chCmd CharacterCommand) (Character, error) {
 
 	now := time.Now()
 	ch := NewCharacter(0, chCmd.Name, now, now)
-	fmt.Printf("SAVING CHARACTER %v", ch)
 	if !database.DB.NewRecord(ch) {
 		return Character{}, errors.New("characters already exists")
 	}
