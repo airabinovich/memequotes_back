@@ -15,6 +15,8 @@ const (
 	MethodNotAllowedMessage = "Method not allowed on the current resource."
 	// InternalServerErrorMessage is the default message when an unexpected condition occurs.
 	InternalServerErrorMessage = "Internal Server Error."
+	// UnauthorizedMessage is the default message when a request doesn't have the authorization
+	UnauthorizedMessage = "Unauthorized"
 )
 
 // APIError represents the standard error structure for the HTTP responses.
@@ -71,4 +73,13 @@ func NewInternalServerError(messages ...string) *APIError {
 	}
 
 	return newAPIError(http.StatusInternalServerError, message, "internal_error")
+}
+
+func NewUnauthorized(messages ...string) *APIError {
+	message := UnauthorizedMessage
+	if len(messages) > 0 {
+		message = strings.Join(messages, " - ")
+	}
+
+	return newAPIError(http.StatusUnauthorized, message, "unauthorized")
 }

@@ -122,7 +122,6 @@ func TestSaveCharacterBadBodyFormat(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	bodyStr := `{"wrong_field":"wrong_value"}`
-
 	body := []byte(bodyStr)
 	req := httptest.NewRequest(http.MethodPost, "/character", bytes.NewBuffer(body))
 
@@ -163,6 +162,108 @@ func TestSaveCharacterOk(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func TestUpdateCharacterNonNumericIdShouldFail(t *testing.T) {
+	t.Log("Calling with a non-numeric ID should return an error")
+
+	w := httptest.NewRecorder()
+
+
+	req := httptest.NewRequest(http.MethodPatch, "/character/john", nil)
+
+	r := utils.TestRouter()
+	r.PATCH("/character/:id", UpdateCharacter)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateCharacterWrongBodyShouldFail(t *testing.T) {
+	t.Log("Calling with a non-numeric ID should return an error")
+
+	w := httptest.NewRecorder()
+
+	bodyStr := `{"wrong_field":"wrong_value"}`
+	body := []byte(bodyStr)
+	req := httptest.NewRequest(http.MethodPatch, "/character/1", bytes.NewBuffer(body))
+
+	r := utils.TestRouter()
+	r.PATCH("/character/:id", UpdateCharacter)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateCharacterDBFails(t *testing.T) {
+	t.Log("DB error should return Internal Server Error")
+
+	w := httptest.NewRecorder()
+
+	mockRepo := &characterMockRepository{}
+	characterRepository = mockRepo
+
+	mockRepo.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(Character{}, false, errors.New("DB error"))
+
+	chCmd := NewCharacterCommand("Comandante Fort")
+	body, _ := json.Marshal(chCmd)
+	req := httptest.NewRequest(http.MethodPatch, "/character/1", bytes.NewBuffer(body))
+
+	r := utils.TestRouter()
+	r.PATCH("/character/:id", UpdateCharacter)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestUpdateCharacterNotFound(t *testing.T) {
+	t.Log("Character not found error should return Not Found")
+
+	w := httptest.NewRecorder()
+
+	mockRepo := &characterMockRepository{}
+	characterRepository = mockRepo
+
+	mockRepo.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(Character{}, false, nil)
+
+	chCmd := NewCharacterCommand("Comandante Fort")
+	body, _ := json.Marshal(chCmd)
+	req := httptest.NewRequest(http.MethodPatch, "/character/1", bytes.NewBuffer(body))
+
+	r := utils.TestRouter()
+	r.PATCH("/character/:id", UpdateCharacter)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestUpdateCharacterOK(t *testing.T) {
+	t.Log("Update character should update and return character")
+
+	w := httptest.NewRecorder()
+
+	mockRepo := &characterMockRepository{}
+	characterRepository = mockRepo
+
+	now := time.Now()
+	ch := NewCharacter(1, "Comandante Fort", now, now)
+	mockRepo.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(ch, true, nil)
+
+	chCmd := NewCharacterCommand("Comandante Fort")
+	body, _ := json.Marshal(chCmd)
+	req := httptest.NewRequest(http.MethodPost, "/character/1", bytes.NewBuffer(body))
+
+	r := utils.TestRouter()
+	r.POST("/character/:id", UpdateCharacter)
+	r.ServeHTTP(w, req)
+
+	chResult := CharacterResultFromCharacter(ch)
+	actualResult := CharacterResult{}
+	assert.NoError(t, json.NewDecoder(w.Result().Body).Decode(&actualResult))
+
+	assert.Equal(t, chResult.ID, actualResult.ID)
+	assert.Equal(t, chResult.Name, actualResult.Name)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 type characterMockRepository struct {
 	mock.Mock
 }
@@ -192,4 +293,20 @@ func (repoMock *characterMockRepository) Save(c *gin.Context, chCmd CharacterCom
 	}
 
 	return ch, args.Error(1)
+}
+
+func (repoMock *characterMockRepository) Update(c *gin.Context, id int64, chCmd CharacterCommand) (Character, bool, error) {
+	args := repoMock.Called(c, id, chCmd)
+
+	ch, ok := args.Get(0).(Character)
+	if !ok {
+		panic(errors.New("mock error"))
+	}
+
+	found, ok := args.Get(1).(bool)
+	if !ok {
+		panic(errors.New("mock error"))
+	}
+
+	return ch, found, args.Error(2)
 }

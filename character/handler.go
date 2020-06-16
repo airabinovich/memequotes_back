@@ -68,3 +68,38 @@ func saveCharacter(c *gin.Context) *rest.APIError {
 	c.JSON(http.StatusOK, CharacterResultFromCharacter(ch))
 	return nil
 }
+
+// UpdateCharacter updates an existing character
+func UpdateCharacter(c *gin.Context) {
+	rest.ErrorWrapper(updateCharacter, c)
+}
+
+func updateCharacter(c *gin.Context) *rest.APIError {
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
+
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		logger.Error("getting character with non-numeric id", err)
+		return rest.NewBadRequest(err.Error())
+	}
+
+	var chCmd CharacterCommand
+	if err := c.ShouldBindJSON(&chCmd); err != nil {
+		logger.Error("updating character bad body format", err)
+		return rest.NewBadRequest(err.Error())
+	}
+
+	logger.Debug(fmt.Sprintf("Updating character with id %d", id))
+	ch, found, err := characterRepository.Update(c, id, chCmd)
+	if err != nil {
+		logger.Error("update character by id", err)
+		return rest.NewInternalServerError(err.Error())
+	}
+	if !found {
+		return rest.NewResourceNotFound(fmt.Sprintf("character %d not found", id))
+	}
+
+	c.JSON(http.StatusOK, CharacterResultFromCharacter(ch))
+	return nil
+}

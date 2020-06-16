@@ -25,3 +25,13 @@ func TestNewInternalServerError(t *testing.T) {
 	assert.Equal(t, "some error", err.Message)
 	assert.Equal(t, "internal_error", err.Err)
 }
+
+func TestNewUnauthorized(t *testing.T) {
+	t.Log("NewUnauthorized should return a new unauthorized")
+
+	err := NewUnauthorized("some error")
+
+	assert.Equal(t, http.StatusUnauthorized, err.Status)
+	assert.Equal(t, "some error", err.Message)
+	assert.Equal(t, "unauthorized", err.Err)
+}

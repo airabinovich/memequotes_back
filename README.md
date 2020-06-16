@@ -4,9 +4,6 @@ This is a dumb application to use as template for a Golang + Gin-gonic backend a
 
 ## Endpoints
 
-### GET /miami
-Returns a random phrase from Ricardo Fort
-
 ### POST /character
 Creates a new Character. The body for the call should be
 ```json
@@ -26,7 +23,7 @@ Retrieve the Character matching the Id. The response body should be
 }
 ```
 
-### PUT /character/:id
+### PATCH /character/:id
 Edit a Character. The body should be
 ```json
 {

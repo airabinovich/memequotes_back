@@ -10,11 +10,14 @@ import (
 )
 
 type CharacterRepository interface {
-	//Get a Character by id. Returns the character, whether it's found and an error
+	// Get a Character by id. Returns the character, whether it's found and an error
 	Get(c *gin.Context, id int64) (Character, bool, error)
 
 	// Save stores a new character
 	Save(c *gin.Context, chCmd CharacterCommand) (Character, error)
+
+	// Update a character. Returns the updated character, whether it's found and an error
+	Update(c *gin.Context, id int64, chCmd CharacterCommand) (Character, bool, error)
 }
 
 type DBCharacterRepository struct {
@@ -56,4 +59,28 @@ func (repo DBCharacterRepository) Save(c *gin.Context, chCmd CharacterCommand) (
 		return Character{}, err
 	}
 	return ch, nil
+}
+
+func (repo DBCharacterRepository) Update(c *gin.Context, id int64, chCmd CharacterCommand) (Character, bool, error) {
+	ctx := commonContext.RequestContext(c)
+	logger := commonContext.Logger(ctx)
+	logger.Debug(fmt.Sprintf("Updating Character with id %d", id))
+
+	ch, found, err := repo.Get(c, id)
+	if err != nil {
+		logger.Error("error retrieving character", err)
+		return Character{}, false, err
+	}
+	if !found {
+		return Character{}, false, nil
+	}
+
+	ch.Name = chCmd.Name
+	ch.LastUpdated = time.Now()
+	if err := repo.db.Save(&ch).Error; err != nil {
+		logger.Error("updating character", err)
+		return Character{}, true, err
+	}
+
+	return ch, true, nil
 }
