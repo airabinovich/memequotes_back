@@ -1,4 +1,4 @@
-package character
+package model
 
 import (
 	"github.com/airabinovich/memequotes_back/utils"

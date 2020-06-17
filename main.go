@@ -49,8 +49,11 @@ func main() {
 		}
 	}()
 
-	character.Initialize()
-	phrase.Initialize()
+	characterRepository := character.NewDBCharacterRepository(database.DB)
+	phraseRepository := phrase.NewDBPhraseRepository(database.DB)
+
+	character.Initialize(characterRepository, phraseRepository)
+	phrase.Initialize(phraseRepository)
 
 	engine := router.Route()
 	if err := engine.Run(":9000"); err != nil {

@@ -8,11 +8,13 @@ import (
 
 func mappings(router *gin.Engine) {
 	router.POST("character", character.SaveCharacter)
-	router.GET("character/:id", character.GetCharacter)
-	router.PATCH("character/:id", character.UpdateCharacter)
+	router.GET("characters", character.GetAllCharacters)
+	router.GET("character/:character-id", character.GetCharacter)
+	router.PATCH("character/:character-id", character.UpdateCharacter)
+	router.DELETE("character/:character-id", character.DeleteCharacter)
 
-	router.POST("character/:id/phrase", phrase.SaveNewPhrase)
-	router.GET("character/:id/phrases", phrase.GetAllPhrasesForCharacter)
-	router.GET("character/:id/phrase/:phrase-id", phrase.GetPhrase)
-	router.DELETE("character/:character-id/phrase/:id", phrase.DeletePhraseForCharacter)
+	router.POST("character/:character-id/phrase", phrase.SaveNewPhrase)
+	router.GET("character/:character-id/phrases", phrase.GetAllPhrasesForCharacter)
+	router.GET("character/:character-id/phrase/:phrase-id", phrase.GetPhrase)
+	router.DELETE("character/:character-id/phrase/:phrase-id", phrase.DeletePhraseForCharacter)
 }

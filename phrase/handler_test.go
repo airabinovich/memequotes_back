@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	customErrors "github.com/airabinovich/memequotes_back/errors"
+	"github.com/airabinovich/memequotes_back/model"
 	"github.com/airabinovich/memequotes_back/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -15,16 +16,17 @@ import (
 	"time"
 )
 
+var phraseMockRepo phrasesMockRepository
+
 func TestGetPhrasesWithNonNumericIdShouldFail(t *testing.T) {
 	t.Log("Calling with a non-numeric ID should return an error")
 
 	w := httptest.NewRecorder()
 
-
 	req := httptest.NewRequest(http.MethodGet, "/character/john/phrases", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrases", GetAllPhrasesForCharacter)
+	r.GET("/character/:character-id/phrases", GetAllPhrasesForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -35,15 +37,14 @@ func TestGetPhrasesDBFails(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return([]Phrase{}, false, errors.New("DB error"))
+	phraseMockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return([]model.Phrase{}, false, errors.New("DB error"))
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrase", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase", GetAllPhrasesForCharacter)
+	r.GET("/character/:character-id/phrase", GetAllPhrasesForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -54,15 +55,14 @@ func TestGetAllPhrasesForCharacterNotFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return([]Phrase{}, false, nil)
+	phraseMockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return([]model.Phrase{}, false, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrases", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrases", GetAllPhrasesForCharacter)
+	r.GET("/character/:character-id/phrases", GetAllPhrasesForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -73,28 +73,27 @@ func TestGetAllPhrasesForCharacterFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
 	now := time.Now()
-	phrases := []Phrase{
-		NewPhrase(1, 1, nil, "miameeee", now, now),
-		NewPhrase(2, 1, nil, "el tren de Ricardo Fort pasa una sola vez en la vida", now, now),
+	phrases := []model.Phrase{
+		model.NewPhrase(1, 1, nil, "miameeee", now, now),
+		model.NewPhrase(2, 1, nil, "el tren de Ricardo Fort pasa una sola vez en la vida", now, now),
 	}
-	mockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return(phrases, true, nil)
+	phraseMockRepo.On("GetAllForCharacter", mock.Anything, mock.Anything).Return(phrases, true, nil)
 
-	phResult := make([]PhraseResult, len(phrases))
+	phResult := make([]model.PhraseResult, len(phrases))
 	for i, phrase := range phrases {
-		phResult[i] = PhraseResultFromPhrase(phrase)
+		phResult[i] = model.PhraseResultFromPhrase(phrase)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrases", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrases", GetAllPhrasesForCharacter)
+	r.GET("/character/:character-id/phrases", GetAllPhrasesForCharacter)
 	r.ServeHTTP(w, req)
 
-	actualResult := make(map[string][]PhraseResult)
+	actualResult := make(map[string][]model.PhraseResult)
 	assert.NoError(t, json.NewDecoder(w.Result().Body).Decode(&actualResult))
 
 	resultPhrases := actualResult["results"]
@@ -112,17 +111,16 @@ func TestSavePhraseDBFails(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Save", mock.Anything, mock.Anything).Return(Phrase{}, errors.New("DB error"))
+	phraseMockRepo.On("Save", mock.Anything, mock.Anything).Return(model.Phrase{}, errors.New("DB error"))
 
-	chCmd := NewPhraseCommand(1, "miameee")
+	chCmd := model.NewPhraseCommand("miameee")
 	body, _ := json.Marshal(chCmd)
 	req := httptest.NewRequest(http.MethodPost, "/character/1/phrase", bytes.NewBuffer(body))
 
 	r := utils.TestRouter()
-	r.POST("/character/:id/phrase", SaveNewPhrase)
+	r.POST("/character/:character-id/phrase", SaveNewPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -139,7 +137,23 @@ func TestSaveCharacterBadBodyFormat(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/character/1/phrase", bytes.NewBuffer(body))
 
 	r := utils.TestRouter()
-	r.POST("/character/:id/phrase", SaveNewPhrase)
+	r.POST("/character/:character-id/phrase", SaveNewPhrase)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSaveCharacterNonNumericCharacterId(t *testing.T) {
+	t.Log("Bad body format should return Bad Request")
+
+	w := httptest.NewRecorder()
+
+	phCmd := model.NewPhraseCommand("miameee")
+	body, _ := json.Marshal(phCmd)
+	req := httptest.NewRequest(http.MethodPost, "/character/johnny/phrase", bytes.NewBuffer(body))
+
+	r := utils.TestRouter()
+	r.POST("/character/:character-id/phrase", SaveNewPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -150,23 +164,22 @@ func TestSavePhraseOk(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
 	now := time.Now()
-	ph := NewPhrase(1, 1, nil, "miameee", now, now)
-	mockRepo.On("Save", mock.Anything, mock.Anything).Return(ph, nil)
+	ph := model.NewPhrase(1, 1, nil, "miameee", now, now)
+	phraseMockRepo.On("Save", mock.Anything, mock.Anything).Return(ph, nil)
 
-	phCmd := NewPhraseCommand(1, "miameee")
+	phCmd := model.NewPhraseCommand("miameee")
 	body, _ := json.Marshal(phCmd)
 	req := httptest.NewRequest(http.MethodPost, "/character/1/phrase", bytes.NewBuffer(body))
 
 	r := utils.TestRouter()
-	r.POST("/character/:id/phrase", SaveNewPhrase)
+	r.POST("/character/:character-id/phrase", SaveNewPhrase)
 	r.ServeHTTP(w, req)
 
-	phResult := PhraseResultFromPhrase(ph)
-	actualResult := PhraseResult{}
+	phResult := model.PhraseResultFromPhrase(ph)
+	actualResult := model.PhraseResult{}
 	assert.NoError(t, json.NewDecoder(w.Result().Body).Decode(&actualResult))
 
 	assert.Equal(t, phResult.ID, actualResult.ID)
@@ -179,15 +192,14 @@ func TestDeletePhraseShouldReturnGone(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	phraseMockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.DELETE("/character/:character-id/phrase/:id", DeletePhraseForCharacter)
+	r.DELETE("/character/:character-id/phrase/:phrase-id", DeletePhraseForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusGone, w.Code)
@@ -198,15 +210,14 @@ func TestDeletePhraseBadCharacterId(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	phraseMockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/character/john/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.DELETE("/character/:character-id/phrase/:id", DeletePhraseForCharacter)
+	r.DELETE("/character/:character-id/phrase/:phrase-id", DeletePhraseForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -217,15 +228,14 @@ func TestDeletePhraseBadPhraseId(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	phraseMockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/character/1/phrase/lala", nil)
 
 	r := utils.TestRouter()
-	r.DELETE("/character/:character-id/phrase/:id", DeletePhraseForCharacter)
+	r.DELETE("/character/:character-id/phrase/:phrase-id", DeletePhraseForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -236,16 +246,15 @@ func TestDeletePhraseIncorrectCharacterId(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).
+	phraseMockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).
 		Return(customErrors.NewUnauthorizedError("character id not match"))
 
 	req := httptest.NewRequest(http.MethodDelete, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.DELETE("/character/:character-id/phrase/:id", DeletePhraseForCharacter)
+	r.DELETE("/character/:character-id/phrase/:phrase-id", DeletePhraseForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -256,16 +265,15 @@ func TestDeletePhraseDBError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).
+	phraseMockRepo.On("Delete", mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("DB failed"))
 
 	req := httptest.NewRequest(http.MethodDelete, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.DELETE("/character/:character-id/phrase/:id", DeletePhraseForCharacter)
+	r.DELETE("/character/:character-id/phrase/:phrase-id", DeletePhraseForCharacter)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -279,7 +287,7 @@ func TestGetPhraseWithNonNumericCharacterIdShouldFail(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/character/john/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -293,7 +301,7 @@ func TestGetPhraseWithNonNumericPhraseIdShouldFail(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrase/burn", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -304,16 +312,15 @@ func TestGetPhraseIncorrectCharacterId(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).
-		Return(Phrase{}, false, customErrors.NewUnauthorizedError("character id not match"))
+	phraseMockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).
+		Return(model.Phrase{}, false, customErrors.NewUnauthorizedError("character id not match"))
 
 	req := httptest.NewRequest(http.MethodGet, "/character/2/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -324,16 +331,15 @@ func TestGetPhraseDBError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).
-		Return(Phrase{}, false, errors.New("DB failed"))
+	phraseMockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).
+		Return(model.Phrase{}, false, errors.New("DB failed"))
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -344,15 +350,14 @@ func TestGetPhraseForCharacterNotFound(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
-	mockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(Phrase{}, false, nil)
+	phraseMockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(model.Phrase{}, false, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -363,21 +368,20 @@ func TestGetPhraseForCharacterOK(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	mockRepo := &phrasesMockRepository{}
-	phraseRepository = mockRepo
+	resetMocks()
 
 	now := time.Now()
-	phrase := NewPhrase(1, 1, nil, "miameeee", now, now)
-	mockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(phrase, true, nil)
+	phrase := model.NewPhrase(1, 1, nil, "miameeee", now, now)
+	phraseMockRepo.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(phrase, true, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/character/1/phrase/1", nil)
 
 	r := utils.TestRouter()
-	r.GET("/character/:id/phrase/:phrase-id", GetPhrase)
+	r.GET("/character/:character-id/phrase/:phrase-id", GetPhrase)
 	r.ServeHTTP(w, req)
 
-	phResult := PhraseResultFromPhrase(phrase)
-	actualResult := PhraseResult{}
+	phResult := model.PhraseResultFromPhrase(phrase)
+	actualResult := model.PhraseResult{}
 	assert.NoError(t, json.NewDecoder(w.Result().Body).Decode(&actualResult))
 
 	assert.Equal(t, phResult.ID, actualResult.ID)
@@ -385,14 +389,19 @@ func TestGetPhraseForCharacterOK(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func resetMocks() {
+	phraseMockRepo = phrasesMockRepository{}
+	phraseRepository = &phraseMockRepo
+}
+
 type phrasesMockRepository struct {
 	mock.Mock
 }
 
-func (repoMock *phrasesMockRepository) Get(c *gin.Context, characterId int64, id int64) (Phrase, bool, error) {
+func (repoMock *phrasesMockRepository) Get(c *gin.Context, characterId int64, id int64) (model.Phrase, bool, error) {
 	args := repoMock.Called(c, characterId, id)
 
-	ph, ok := args.Get(0).(Phrase)
+	ph, ok := args.Get(0).(model.Phrase)
 	if !ok {
 		panic(errors.New("mock error"))
 	}
@@ -405,10 +414,10 @@ func (repoMock *phrasesMockRepository) Get(c *gin.Context, characterId int64, id
 	return ph, found, args.Error(2)
 }
 
-func (repoMock *phrasesMockRepository) GetAllForCharacter(c *gin.Context, characterId int64) ([]Phrase, bool, error) {
+func (repoMock *phrasesMockRepository) GetAllForCharacter(c *gin.Context, characterId int64) ([]model.Phrase, bool, error) {
 	args := repoMock.Called(c, characterId)
 
-	ph, ok := args.Get(0).([]Phrase)
+	ph, ok := args.Get(0).([]model.Phrase)
 	if !ok {
 		panic(errors.New("mock error"))
 	}
@@ -421,10 +430,10 @@ func (repoMock *phrasesMockRepository) GetAllForCharacter(c *gin.Context, charac
 	return ph, found, args.Error(2)
 }
 
-func (repoMock *phrasesMockRepository) Save(c *gin.Context, phCmd PhraseCommand) (Phrase, error) {
+func (repoMock *phrasesMockRepository) Save(c *gin.Context, phCmd model.PhraseCommand) (model.Phrase, error) {
 	args := repoMock.Called(c, phCmd)
 
-	ph, ok := args.Get(0).(Phrase)
+	ph, ok := args.Get(0).(model.Phrase)
 	if !ok {
 		panic(errors.New("mock error"))
 	}

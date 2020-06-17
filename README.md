@@ -12,7 +12,22 @@ Creates a new Character. The body for the call should be
 }
 ```
 
-### GET /character/:id
+### GET /characters
+Retrieve all Characters. The response body should be
+```json
+{
+  "results": [
+    {
+      "id": 1,
+      "name": "character_name",
+      "date_created": "2020-06-14T17:45:00.000Z",
+      "last_updated": "2020-06-14T17:45:00.000Z"
+    }
+  ]
+}
+```
+
+### GET /character/:character-id
 Retrieve the Character matching the Id. The response body should be
 ```json
 {
@@ -23,7 +38,7 @@ Retrieve the Character matching the Id. The response body should be
 }
 ```
 
-### PATCH /character/:id
+### PATCH /character/:character-id
 Edit a Character. The body should be
 ```json
 {
@@ -31,17 +46,27 @@ Edit a Character. The body should be
 }
 ```
 
-### DELETE /character/:id
+### DELETE /character/:character-id
 Delete a character. No body for response, status 410 if deleted
 
-### GET /character/:id/phrases
+### GET /character/:character-id/phrase/:phrase-id
+Retrieve a phrases from a character, only if it belongs to that character. Response body:
+```json
+{
+  "id": 1,
+  "content": "phrase content",
+  "date_created": "2020-06-14T17:45:00.000Z",
+  "last_updated": "2020-06-14T17:45:00.000Z"
+}
+```
+
+### GET /character/:character-id/phrases
 Retrieve all phrases from a character. Response body:
 ```json
 {
   "results": [
     {
       "id": 1,
-      "name": "phrase name",
       "content": "phrase content",
       "date_created": "2020-06-14T17:45:00.000Z",
       "last_updated": "2020-06-14T17:45:00.000Z"
@@ -50,11 +75,13 @@ Retrieve all phrases from a character. Response body:
 }
 ```
 
-### POST /character/:id/phrase
+### POST /character/:character-id/phrase
 Create a new phrase for a character. The body:
 ```json
 {
-  "name": "phrase name",
   "content": "phrase content"
 }
 ```
+
+### DELETE /character/:character-id/phrase/:phrase-id
+Delete a phrase matching the phrase-id, only if it belongs to the character-id. No body for response, status 410 if deleted

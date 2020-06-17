@@ -1,7 +1,6 @@
-package phrase
+package model
 
 import (
-	"github.com/airabinovich/memequotes_back/character"
 	"github.com/airabinovich/memequotes_back/utils"
 	"time"
 )
@@ -43,14 +42,14 @@ func PhraseResultFromPhrase(phrase Phrase) PhraseResult {
 type Phrase struct {
 	ID          int64 `gorm:"primary_key;AUTO_INCREMENT"`
 	CharacterId int64
-	Character   *character.Character `gorm:"foreignkey:CharacterId"`
+	Character   *Character `gorm:"foreignkey:CharacterId"`
 	Content     string
 	DateCreated time.Time `gorm:"column:date_created;type:datetime;not null"`
 	LastUpdated time.Time `gorm:"column:last_updated;type:datetime;not null"`
 }
 
 // NewPhrase is a constructor for Phrase
-func NewPhrase(ID int64, characterId int64, character *character.Character, content string, dateCreacted time.Time, lastUpdated time.Time) Phrase {
+func NewPhrase(ID int64, characterId int64, character *Character, content string, dateCreacted time.Time, lastUpdated time.Time) Phrase {
 	return Phrase{
 		ID:          ID,
 		CharacterId: characterId,
@@ -63,14 +62,13 @@ func NewPhrase(ID int64, characterId int64, character *character.Character, cont
 
 // PhraseCommand contains the info to create a phrase
 type PhraseCommand struct {
-	CharacterId int64  `json:"character_id" binding:"required"`
+	CharacterId int64  `json:"character_id"`
 	Content     string `json:"content" binding:"required"`
 }
 
 // NewPhraseCommand is a constructor for PhraseCommand
-func NewPhraseCommand(characterId int64, content string) PhraseCommand {
+func NewPhraseCommand(content string) PhraseCommand {
 	return PhraseCommand{
-		CharacterId: characterId,
 		Content: content,
 	}
 }

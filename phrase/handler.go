@@ -3,18 +3,19 @@ package phrase
 import (
 	"fmt"
 	commonContext "github.com/airabinovich/memequotes_back/context"
-	"github.com/airabinovich/memequotes_back/database"
 	customErrors "github.com/airabinovich/memequotes_back/errors"
+	"github.com/airabinovich/memequotes_back/model"
+	"github.com/airabinovich/memequotes_back/repository"
 	"github.com/airabinovich/memequotes_back/rest"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
-var phraseRepository PhraseRepository
+var phraseRepository repository.PhraseRepository
 
-func Initialize() {
-	phraseRepository = NewDBPhraseRepository(database.DB)
+func Initialize(phRepo repository.PhraseRepository) {
+	phraseRepository = phRepo
 }
 
 func GetPhrase(c *gin.Context) {
@@ -25,7 +26,7 @@ func getPhrase(c *gin.Context) *rest.APIError {
 	ctx := commonContext.RequestContext(c)
 	logger := commonContext.Logger(ctx)
 
-	characterId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	characterId, err := strconv.ParseInt(c.Param("character-id"), 10, 64)
 	if err != nil {
 		logger.Error("getting character with non-numeric characterId", err)
 		return rest.NewBadRequest(err.Error())
@@ -51,7 +52,7 @@ func getPhrase(c *gin.Context) *rest.APIError {
 		return rest.NewResourceNotFound("phrase not found")
 	}
 
-	c.JSON(http.StatusOK, PhraseResultFromPhrase(phrase))
+	c.JSON(http.StatusOK, model.PhraseResultFromPhrase(phrase))
 	return nil
 }
 
@@ -64,7 +65,7 @@ func getAllPhrasesForCharacter(c *gin.Context) *rest.APIError {
 	ctx := commonContext.RequestContext(c)
 	logger := commonContext.Logger(ctx)
 
-	characterId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	characterId, err := strconv.ParseInt(c.Param("character-id"), 10, 64)
 	if err != nil {
 		logger.Error("getting character with non-numeric characterId", err)
 		return rest.NewBadRequest(err.Error())
@@ -79,9 +80,9 @@ func getAllPhrasesForCharacter(c *gin.Context) *rest.APIError {
 	if !found {
 		return rest.NewResourceNotFound(fmt.Sprintf("phrases for character %d not found", characterId))
 	}
-	phraseResults := make([]PhraseResult, len(phrases))
+	phraseResults := make([]model.PhraseResult, len(phrases))
 	for i, phrase := range phrases {
-		phraseResults[i] = PhraseResultFromPhrase(phrase)
+		phraseResults[i] = model.PhraseResultFromPhrase(phrase)
 	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{
@@ -99,11 +100,18 @@ func saveNewPhrase(c *gin.Context) *rest.APIError {
 	ctx := commonContext.RequestContext(c)
 	logger := commonContext.Logger(ctx)
 
-	var phCmd PhraseCommand
+	characterId, err := strconv.ParseInt(c.Param("character-id"), 10, 64)
+	if err != nil {
+		logger.Error("getting character with non-numeric characterId", err)
+		return rest.NewBadRequest(err.Error())
+	}
+
+	var phCmd model.PhraseCommand
 	if err := c.ShouldBindJSON(&phCmd); err != nil {
 		logger.Error("creating phrase bad body format", err)
 		return rest.NewBadRequest(err.Error())
 	}
+	phCmd.CharacterId = characterId
 
 	phrase, err := phraseRepository.Save(c, phCmd)
 	if err != nil {
@@ -111,7 +119,7 @@ func saveNewPhrase(c *gin.Context) *rest.APIError {
 		return rest.NewInternalServerError(err.Error())
 	}
 
-	c.JSON(http.StatusOK, PhraseResultFromPhrase(phrase))
+	c.JSON(http.StatusOK, model.PhraseResultFromPhrase(phrase))
 	return nil
 }
 
@@ -129,7 +137,7 @@ func deletePhraseForCharacter(c *gin.Context) *rest.APIError {
 		return rest.NewBadRequest(err.Error())
 	}
 
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, err := strconv.ParseInt(c.Param("phrase-id"), 10, 64)
 	if err != nil {
 		logger.Error("getting character with non-numeric id", err)
 		return rest.NewBadRequest(err.Error())
