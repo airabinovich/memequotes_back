@@ -2,6 +2,28 @@
 
 This is a dumb application to use as template for a Golang + Gin-gonic backend app
 
+## Database
+
+### Structure
+
+The database structure is in `db_structure.sql`
+
+### Host and Credentials
+
+The DB host and credentials should be in a file `credentials.conf` (added in .gitignore) with format
+
+```conf
+db.host=localhost
+db.port=3306
+db.user=root
+db.password=password
+```
+
+Run the application using
+```sh
+go run main.go --credentials=credentials.conf
+```
+
 ## Endpoints
 
 ### POST /character
